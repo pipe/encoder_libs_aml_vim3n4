@@ -37,6 +37,7 @@ MKDIR=mkdir -p
 SOURCES = libvpmulti_codec.c  \
 		  h264bitstream.c \
 		  AML_MultiEncoder.c \
+		  shmem_ctl.c
 
 OBJECTNAMES=$(patsubst %.c,%.o, $(SOURCES))
 OBJECTPATHS=$(addprefix $(OBJDIR)/,$(notdir $(OBJECTNAMES)))

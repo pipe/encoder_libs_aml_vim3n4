@@ -41,11 +41,14 @@
 #endif
 
 #include <sys/time.h>
+#include <sys/mman.h>
 #include "include/vp_multi_codec_1_0.h"
 #include "include/AML_MultiEncoder.h"
 #include "include/enc_define.h"
 #include "vdi_osal.h"
 #include "include/h264bitstream.h"
+#include "shmem_ctl.h"
+
 
 
 #define MAX_FRAME_HIST         (128)
@@ -93,6 +96,7 @@ typedef struct vp_multi_s {
   int total_win_size;
   int hist_win_len;
   int hist_skip_thresh;
+  void *userData;
 } VPMultiEncHandle;
 
 static int64_t GetNowUs() {
@@ -372,6 +376,14 @@ vl_codec_handle_t vl_multi_encoder_init(vl_codec_id_t codec_id,
   if (ret < 0)
     goto exit;
 
+  mHandle->userData = mapCtl();
+  if (mHandle->userData != MAP_FAILED){
+     fprintf(stderr,"Encoder inited userdata is %p\n",mHandle->userData);
+     mHandle->mEncParams.param_change_enable = 1;
+  } else {
+	  fprintf(stderr,"failed to open/allocate shared memory\n");
+  }
+
   mHandle->am_enc_handle = AML_MultiEncInitialize(&(mHandle->mEncParams));
   if (mHandle->am_enc_handle == 0)
     goto exit;
@@ -512,6 +524,7 @@ encoding_metadata_t vl_multi_encoder_encode(vl_codec_handle_t codec_handle,
   int ret;
   int i;
   uint32_t dataLength = 0;
+  uint32_t nbr = 0;
   VPMultiEncHandle* handle = (VPMultiEncHandle *)codec_handle;
 
   encoding_metadata_t result;
@@ -573,8 +586,22 @@ encoding_metadata_t vl_multi_encoder_encode(vl_codec_handle_t codec_handle,
     }
   }
 
+
   if (type == FRAME_TYPE_I || type == FRAME_TYPE_IDR)
     handle->mKeyFrameRequested = true;
+
+  if (0 != force_key(handle->userData, &(nbr))){
+      fprintf(stderr,"Encoder force keyframe \n");
+      fprintf(stderr,"Encoder bitrate was  %u \n",handle->mEncParams.bitrate);
+      handle->mKeyFrameRequested = true;
+      fprintf(stderr,"Encoder change bitrate to  %u \n",nbr);
+      if (nbr != handle->mEncParams.bitrate){
+	ret = vl_video_encoder_change_bitrate(codec_handle,nbr);
+        fprintf(stderr,"Encoder change bitrate result  %d \n",ret);
+      }
+      fprintf(stderr,"Encoder bitrate now %u \n",handle->mEncParams.bitrate);
+  }
+
 
   if (handle->mNumInputFrames >= 0) {
     AMVMultiEncFrameIO videoInput, videoRet;

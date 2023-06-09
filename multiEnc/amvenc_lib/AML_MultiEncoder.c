@@ -51,6 +51,7 @@
 #include "vdi_osal.h"
 #include "debug.h"
 #include "vpuapifunc.h"
+
 #include <sys/time.h>
 
 #ifndef min
@@ -286,7 +287,6 @@ typedef struct AMVEncContext_s {
   uint32 CustomUpdateID; //store the update count
   uint32 CustomMapUpdatedId[MAX_REG_FRAME]; // updated ID cnt
   WeigtedPredInfo wp_para;
-
 #if SUPPORT_SCALE
   uint32 ge2d_initial_done;
   aml_ge2d_t amlge2d;
