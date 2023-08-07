@@ -283,6 +283,8 @@ AMVEnc_Status AML_HWSetInput(AMVEncHandle *Handle, AMVEncFrameIO *input) {
     if (info->nal_unit_type == AVC_NALTYPE_IDR)
         info->frame_in_gop = 0;
 
+
+
     AMRCInitFrameQP(&info->hw_info, (info->nal_unit_type == AVC_NALTYPE_IDR), input->bitrate, input->frame_rate);
 
     if (status == AMVENC_SUCCESS) {

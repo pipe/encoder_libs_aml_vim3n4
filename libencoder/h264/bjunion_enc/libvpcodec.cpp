@@ -2,9 +2,13 @@
 #include "vpcodec_1_0.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 
 #include "include/AML_HWEncoder.h"
 #include "include/enc_define.h"
+#include "shmem_ctl.h"
 
 const char version[] = "Amlogic libvpcodec version 1.0";
 
@@ -75,6 +79,7 @@ int initEncParams(AMVEncHandle *handle, int width, int height, int frame_rate, i
 }
 
 
+
 vl_codec_handle_t vl_video_encoder_init(vl_codec_id_t codec_id, int width, int height, int frame_rate, int bit_rate, int gop, vl_img_format_t img_format)
 {
     int ret;
@@ -97,6 +102,8 @@ vl_codec_handle_t vl_video_encoder_init(vl_codec_id_t codec_id, int width, int h
     mHandle->mSpsPpsHeaderReceived = false;
     mHandle->mNumInputFrames = -1;  // 1st two buffers contain SPS and PPS
 
+    mHandle->userData = mapCtl();
+    printf("Encoder inited userdata is %p\n",mHandle->userData);
     return (vl_codec_handle_t) mHandle;
 
 exit:
@@ -115,6 +122,14 @@ int vl_video_encoder_encode(vl_codec_handle_t codec_handle, vl_frame_type_t fram
     uint32_t dataLength = 0;
     int type;
     AMVEncHandle *handle = (AMVEncHandle *)codec_handle;
+    int f = force_key(handle->userData, &(handle->mEncParams.bitrate));
+    if (f != 0){
+	    handle->mKeyFrameRequested = true;
+            printf("Encoder called bitrate is %u \n",handle->mEncParams.bitrate);
+    }
+
+
+
     if (!handle->mSpsPpsHeaderReceived)
     {
         ret = AML_HWEncNAL(handle, (unsigned char *)out, (unsigned int *)&in_size/*should be out size*/, &type);
@@ -151,6 +166,10 @@ int vl_video_encoder_encode(vl_codec_handle_t codec_handle, vl_frame_type_t fram
 
         videoInput.YCbCr[0] = (unsigned long)&in[0];
         videoInput.YCbCr[1] = (unsigned long)(videoInput.YCbCr[0] + videoInput.height * videoInput.pitch);
+
+	// hack as advised here : 
+	// https://forum.khadas.com/t/vim3-h-264-h-265-video-encoding/7212/18
+	format = 3;
 
         if (format == 0) { //NV12
             videoInput.fmt = AMVENC_NV12;
