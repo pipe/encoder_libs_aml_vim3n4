@@ -35,3 +35,18 @@ u_int32_t force_key(void *data, u_int32_t *bitrate){
 	return force_key;
 }
 
+int32_t getIntEnv (char *name, int32_t defval){
+	char *val = getenv(name);
+	int32_t ival = defval;
+	if (val != NULL){
+		ival =atoi(val);
+	}
+	return ival;
+}
+int32_t getRotation(int32_t rot){
+	return getIntEnv("AML_ROTATION",0);
+}
+int32_t getMirror(int32_t mir){
+	return getIntEnv("AML_MIRROR",0);
+}
+
